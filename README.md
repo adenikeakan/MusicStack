@@ -1,53 +1,107 @@
-# Clarity Language
-Clarity is a new language that brings smart contracts to Bitcoin. It is a decidable language, meaning you can know, with certainty, from the code itself what the program will do. Clarity is interpreted (not compiled) & the source code is published on the blockchain. Clarity gives developers a safe way to build complex smart contracts.
+# MusicStack: Real-Time Music Royalty Distribution Platform
 
-## Using Clarity
-This repl already contains the complete setup so you do not need to install anything. You can access the REPL using `clarity-repl` & clarinet using `clarinet`.
+![Stacks](https://img.shields.io/badge/Stacks-Blockchain-blue)
+![Clarity](https://img.shields.io/badge/Clarity-Smart%20Contracts-brightgreen)
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 
-## Example: [hello-world](https://docs.hiro.so/tutorials/clarity-hello-world)
+## Overview
 
-#### To generate a clarinet project called *hello-world*:
-```
-clarinet new hello-world
-```
-#### To generate a new clarity contract:
-```
-# first change directory to the project location
-cd hello-world/
-clarinet contract new hello-world
-```
-Let's add some clarity code to our **hello-world.clar** smart contract.
-```
-(define-public (say-hi)
-  (ok "hello world"))
+MusicStack is a revolutionary decentralized platform built on the Stacks blockchain that enables real-time royalty distribution for music performances and streaming. By leveraging Stacks' smart contracts and Bitcoin's security, we're solving the persistent challenge of fair, transparent, and instant royalty payments in the music industry.
 
-(define-read-only (echo-number (val int))
-  (ok val))
-```
-### Run & Test Your Smart Contract
-In the **hello-world** folder, we have already setup a clarinet project using the commands above.
+### Key Features
 
-#### To verify if syntax of the written smart contract is correct:
+- **Real-Time Payment Distribution**: Instant royalty splits during live performances and streaming sessions
+- **Smart Contract-Based Rights Management**: Automated tracking and enforcement of music rights
+- **Bitcoin-Secured Payments**: Leveraging Stacks' Bitcoin settlement for secure transactions
+- **Transparent Revenue Sharing**: Clear visibility into payment distributions
+- **Automated Compliance**: Smart contracts ensuring proper rights management
+
+## Technical Architecture
+
+### Smart Contract Components
+
+1. **Rights Registry Contract**
+   - Stores and manages music rights ownership
+   - Handles complex splitting arrangements
+   - Manages rights transfer and updates
+
+2. **Payment Distribution Contract**
+   - Real-time payment calculations
+   - Automated distribution logic
+   - Integration with streaming platforms
+
+3. **Performance Tracking Contract**
+   - Live performance verification
+   - Stream counting and verification
+   - Play count authentication
+
+### Integration with Stacks
+
+- Utilizes Clarity smart contracts for transparent rights management
+- Leverages sBTC for Bitcoin-backed payments
+- Uses Stacks' proof of transfer for secure settlement
+
+## Development Roadmap
+
+### Phase 1: Core Infrastructure
+- [ ] Rights Registry Smart Contract
+- [ ] Basic Payment Distribution Logic
+- [ ] Contract Testing Suite
+
+### Phase 2: Payment Mechanics
+- [ ] Real-Time Distribution Implementation
+- [ ] Integration with Streaming Platforms
+- [ ] Payment Verification System
+
+### Phase 3: User Interface
+- [ ] Artist Dashboard
+- [ ] Rights Management Interface
+- [ ] Payment Tracking System
+
+## For Reviewers
+
+This project demonstrates meaningful Stacks integration through:
+
+1. **Bitcoin Settlement**: Using Stacks' Bitcoin anchoring for secure royalty payments
+2. **Smart Contract Innovation**: Complex rights management through Clarity contracts
+3. **Real-World Utility**: Solving actual music industry challenges
+4. **Technical Complexity**: Implementing real-time payment distribution
+
+### Repository Structure
+
 ```
-# first change directory to the project location
-cd hello-world/
-clarinet check
-``` 
-#### To launch a local console:
-```
-# first change directory to the project location
-cd hello-world/
-clarinet console
-```
-### Testing within `clarinet console`
-```
-# this should return (ok "Hello world")
->> (contract-call? .hello-world say-hi)
-# this should return (ok 42)
->> (contract-call? .hello-world echo-number 42)
+/contracts         # Clarity smart contracts
+/tests            # Contract test suites
+/frontend         # User interface components
+/docs             # Technical documentation
 ```
 
-## Documentation & Resources
-* Clarity Documentation: [docs.stacks.co/write-smart-contracts](https://docs.stacks.co/write-smart-contracts/overview)
-* Clarity Reference: [github.com/clarity-lang/reference](https://github.com/clarity-lang/reference)
-* More Resources: [clarity-lang.org/#started](https://clarity-lang.org/#started)
+## Getting Started
+
+### Prerequisites
+- Stacks blockchain environment
+- Clarity CLI
+- Node.js and npm
+
+### Local Development
+```bash
+# Clone the repository
+git clone https://github.com/adenikeakan/MusicStack.git
+
+# Install dependencies
+npm install
+
+# Run tests
+clarinet test
+
+# Start local development
+npm run dev
+```
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
