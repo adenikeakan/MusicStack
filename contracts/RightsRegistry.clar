@@ -59,3 +59,24 @@
         (ok true)
     )
 )
+
+(define-public (add-collaborator 
+    (song-id uint) 
+    (collaborator principal) 
+    (share uint)
+    (role (string-ascii 20)))
+    (let
+        ((song-exists (map-get? rights-registry { song-id: song-id })))
+
+        ;; Validations
+        (asserts! (is-some song-exists) ERR-INVALID-SONG)
+        (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
+        (asserts! (<= share u10000) ERR-INVALID-SHARE)  ;; Max 100%
+
+        (map-set royalty-splits
+            { song-id: song-id, collaborator: collaborator }
+            { share: share, role: role }
+        )
+        (ok true)
+    )
+)
