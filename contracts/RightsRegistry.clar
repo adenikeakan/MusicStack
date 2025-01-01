@@ -30,3 +30,12 @@
 (define-constant ERR-INVALID-SONG (err u101))
 (define-constant ERR-ALREADY-EXISTS (err u102))
 (define-constant ERR-INVALID-SHARE (err u103))
+
+;; Read-Only Functions
+(define-read-only (get-song-details (song-id uint))
+    (map-get? rights-registry { song-id: song-id })
+)
+
+(define-read-only (get-collaborator-share (song-id uint) (collaborator principal))
+    (map-get? royalty-splits { song-id: song-id, collaborator: collaborator })
+)
