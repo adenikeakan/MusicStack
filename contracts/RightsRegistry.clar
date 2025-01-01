@@ -80,3 +80,18 @@
         (ok true)
     )
 )
+
+(define-public (update-song-status (song-id uint) (new-status (string-ascii 10)))
+    (let
+        ((song-exists (map-get? rights-registry { song-id: song-id })))
+
+        (asserts! (is-some song-exists) ERR-INVALID-SONG)
+        (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
+
+        (map-set rights-registry
+            { song-id: song-id }
+            (merge (unwrap-panic song-exists) { status: new-status })
+        )
+        (ok true)
+    )
+)
