@@ -24,3 +24,9 @@
         role: (string-ascii 20)  ;; e.g., "writer", "producer", "performer"
     }
 )
+
+;; Constants
+(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-INVALID-SONG (err u101))
+(define-constant ERR-ALREADY-EXISTS (err u102))
+(define-constant ERR-INVALID-SHARE (err u103))
