@@ -95,3 +95,12 @@
         (ok true)
     )
 )
+
+;; Administrative Functions
+(define-public (transfer-ownership (new-owner principal))
+    (begin
+        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+        (var-set contract-owner new-owner)
+        (ok true)
+    )
+)
