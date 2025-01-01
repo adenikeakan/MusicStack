@@ -1,7 +1,18 @@
+;; First, let's define the SIP-010 trait
+(define-trait sip-010-trait
+  (
+    (transfer (uint principal principal (optional (buff 34))) (response bool uint))
+    (get-name () (response (string-ascii 32) uint))
+    (get-symbol () (response (string-ascii 32) uint))
+    (get-decimals () (response uint uint))
+    (get-balance (principal) (response uint uint))
+    (get-total-supply () (response uint uint))
+    (get-token-uri () (response (optional (string-utf8 256)) uint))
+  )
+)
+
 ;; Rights Registry Contract
 ;; Handles music rights ownership, royalty splits, and rights transfers
-
-(use-trait ft-trait .sip-010-trait.sip-010-trait)
 
 ;; Data Variables
 (define-data-var contract-owner principal tx-sender)
@@ -46,7 +57,7 @@
         ((song-exists (map-get? rights-registry { song-id: song-id })))
         (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
         (asserts! (is-none song-exists) ERR-ALREADY-EXISTS)
-
+        
         (map-set rights-registry
             { song-id: song-id }
             {
@@ -67,12 +78,12 @@
     (role (string-ascii 20)))
     (let
         ((song-exists (map-get? rights-registry { song-id: song-id })))
-
+        
         ;; Validations
         (asserts! (is-some song-exists) ERR-INVALID-SONG)
         (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
         (asserts! (<= share u10000) ERR-INVALID-SHARE)  ;; Max 100%
-
+        
         (map-set royalty-splits
             { song-id: song-id, collaborator: collaborator }
             { share: share, role: role }
@@ -84,10 +95,10 @@
 (define-public (update-song-status (song-id uint) (new-status (string-ascii 10)))
     (let
         ((song-exists (map-get? rights-registry { song-id: song-id })))
-
+        
         (asserts! (is-some song-exists) ERR-INVALID-SONG)
         (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
-
+        
         (map-set rights-registry
             { song-id: song-id }
             (merge (unwrap-panic song-exists) { status: new-status })
