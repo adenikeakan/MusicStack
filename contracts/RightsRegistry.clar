@@ -1,6 +1,8 @@
 ;; Rights Registry Contract
 ;; Handles music rights ownership, royalty splits, and rights transfers
 
+(use-trait ft-trait .sip-010-trait.sip-010-trait)
+
 ;; Data Variables
 (define-data-var contract-owner principal tx-sender)
 
