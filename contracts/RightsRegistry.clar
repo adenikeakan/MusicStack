@@ -11,7 +11,7 @@
   )
 )
 
-;; Constants for validation
+;; Error Constants
 (define-constant ERR-NOT-AUTHORIZED (err u100))
 (define-constant ERR-INVALID-SONG (err u101))
 (define-constant ERR-ALREADY-EXISTS (err u102))
@@ -22,6 +22,14 @@
 (define-constant ERR-INVALID-ROLE (err u107))
 (define-constant ERR-ZERO-ADDRESS (err u108))
 (define-constant ERR-TOTAL-SHARE-EXCEEDED (err u109))
+
+;; Constants for validation
+(define-constant MIN-SONG-ID u1)
+(define-constant MAX-SONG-ID u1000000)
+(define-constant MIN-TITLE-LENGTH u1)
+(define-constant MAX-TITLE-LENGTH u256)
+(define-constant VALID-ROLES (list "writer" "producer" "performer"))
+(define-constant VALID-STATUSES (list "active" "inactive"))
 
 ;; Data Variables
 (define-data-var contract-owner principal tx-sender)
@@ -50,172 +58,134 @@
     { total-share: uint }
 )
 
-;; Private Functions
-(define-private (sanitize-song-id (id uint))
-    (if (> id u0)
-        id
-        u0))
+;; Private Helper Functions
+(define-private (is-valid-song-id (id uint))
+    (and 
+        (>= id MIN-SONG-ID)
+        (<= id MAX-SONG-ID)))
 
-(define-private (sanitize-title (input (string-ascii 256)))
-    (if (is-eq input "")
-        "untitled"
-        input))
+(define-private (is-valid-title (title (string-ascii 256)))
+    (and 
+        (>= (len title) MIN-TITLE-LENGTH)
+        (<= (len title) MAX-TITLE-LENGTH)))
 
-(define-private (sanitize-status (input (string-ascii 10)))
-    (if (or (is-eq input "active") (is-eq input "inactive"))
-        input
-        "inactive"))
-
-(define-private (sanitize-role (input (string-ascii 20)))
-    (if (or 
-        (is-eq input "writer")
-        (is-eq input "producer")
-        (is-eq input "performer"))
-        input
-        "other"))
-
-(define-private (validate-song-id (id uint))
-    (if (> id u0)
-        (ok id)
-        ERR-INVALID-SONG-ID))
-
-(define-private (validate-title (input (string-ascii 256)))
-    (if (not (is-eq input ""))
-        (ok input)
-        ERR-INVALID-TITLE))
-
-(define-private (validate-status (input (string-ascii 10)))
-    (if (or (is-eq input "active") (is-eq input "inactive"))
-        (ok input)
-        ERR-INVALID-STATUS))
-
-(define-private (validate-role (input (string-ascii 20)))
-    (if (or 
-        (is-eq input "writer")
-        (is-eq input "producer")
-        (is-eq input "performer"))
-        (ok input)
+(define-private (is-valid-role (role (string-ascii 20)))
+    (asserts! 
+        (or 
+            (is-eq role "writer")
+            (is-eq role "producer")
+            (is-eq role "performer"))
         ERR-INVALID-ROLE))
 
-(define-private (get-total-share (song-id uint))
-    (get total-share 
-        (default-to 
-            { total-share: u0 }
-            (map-get? total-song-shares { song-id: (sanitize-song-id song-id) }))))
+(define-private (is-valid-status (status (string-ascii 10)))
+    (asserts! 
+        (or 
+            (is-eq status "active")
+            (is-eq status "inactive"))
+        ERR-INVALID-STATUS))
+
+(define-private (check-authorization)
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED))
 
 ;; Read-Only Functions
 (define-read-only (get-song-details (song-id uint))
-    (let
-        ((safe-id (sanitize-song-id song-id)))
-        (ok (map-get? rights-registry { song-id: safe-id }))))
+    (begin
+        (asserts! (is-valid-song-id song-id) ERR-INVALID-SONG-ID)
+        (ok (map-get? rights-registry { song-id: song-id }))))
 
 (define-read-only (get-collaborator-share (song-id uint) (collaborator principal))
-    (let
-        ((safe-id (sanitize-song-id song-id)))
-        (ok (map-get? royalty-splits 
-            { song-id: safe-id, collaborator: collaborator }))))
+    (begin
+        (asserts! (is-valid-song-id song-id) ERR-INVALID-SONG-ID)
+        (ok (map-get? royalty-splits { song-id: song-id, collaborator: collaborator }))))
 
 ;; Public Functions
 (define-public (register-song (song-id uint) (title (string-ascii 256)))
-    (let
-        ((safe-id (sanitize-song-id song-id))
-         (safe-title (sanitize-title title)))
-        
-        ;; Input validation
-        (try! (validate-song-id safe-id))
-        (try! (validate-title safe-title))
-        
-        ;; Authorization check
-        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-        
-        ;; Check if song already exists
-        (asserts! (is-none (map-get? rights-registry { song-id: safe-id })) ERR-ALREADY-EXISTS)
-        
-        ;; Register the song
+    (begin
+        ;; Validate inputs first
+        (asserts! (is-valid-song-id song-id) ERR-INVALID-SONG-ID)
+        (asserts! (is-valid-title title) ERR-INVALID-TITLE)
+
+        ;; Check authorization
+        (check-authorization)
+
+        ;; Verify song doesn't exist
+        (asserts! (is-none (map-get? rights-registry { song-id: song-id })) ERR-ALREADY-EXISTS)
+
+        ;; Register song
         (map-set rights-registry
-            { song-id: safe-id }
+            { song-id: song-id }
             {
                 owner: tx-sender,
-                title: safe-title,
+                title: title,
                 created-at: block-height,
                 status: "active"
-            }
-        )
-        
-        ;; Initialize total share
+            })
+
+        ;; Initialize shares
         (map-set total-song-shares
-            { song-id: safe-id }
-            { total-share: u0 }
-        )
-        
-        (ok true)
-    ))
+            { song-id: song-id }
+            { total-share: u0 })
+
+        (ok true)))
 
 (define-public (add-collaborator 
     (song-id uint) 
     (collaborator principal) 
     (share uint)
     (role (string-ascii 20)))
-    (let
-        ((safe-id (sanitize-song-id song-id))
-         (safe-role (sanitize-role role)))
-        
-        ;; Input validation
-        (try! (validate-song-id safe-id))
-        (try! (validate-role safe-role))
+    (begin
+        ;; Validate all inputs first
+        (asserts! (is-valid-song-id song-id) ERR-INVALID-SONG-ID)
+        (try! (is-valid-role role))
         (asserts! (not (is-eq collaborator tx-sender)) ERR-ZERO-ADDRESS)
         (asserts! (<= share u10000) ERR-INVALID-SHARE)
-        
-        ;; Get song details and validate
-        (let ((song-exists (map-get? rights-registry { song-id: safe-id }))
-              (current-total (get-total-share safe-id)))
-            
-            (asserts! (is-some song-exists) ERR-INVALID-SONG)
-            (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
-            
-            ;; Check if total share would exceed 100%
-            (asserts! (<= (+ share current-total) u10000) ERR-TOTAL-SHARE-EXCEEDED)
-            
-            ;; Update collaborator share
-            (map-set royalty-splits
-                { song-id: safe-id, collaborator: collaborator }
-                { share: share, role: safe-role }
-            )
-            
-            ;; Update total share
-            (map-set total-song-shares
-                { song-id: safe-id }
-                { total-share: (+ share current-total) }
-            )
-            
-            (ok true)
-        )))
 
-(define-public (update-song-status (song-id uint) (new-status (string-ascii 10)))
-    (let
-        ((safe-id (sanitize-song-id song-id))
-         (safe-status (sanitize-status new-status)))
-        
-        ;; Input validation
-        (try! (validate-song-id safe-id))
-        (try! (validate-status safe-status))
-        
-        (let ((song-exists (map-get? rights-registry { song-id: safe-id })))
-            (asserts! (is-some song-exists) ERR-INVALID-SONG)
-            (asserts! (is-eq tx-sender (get owner (unwrap-panic song-exists))) ERR-NOT-AUTHORIZED)
-            
+        (let ((song-details (unwrap! (get-song-details song-id) ERR-INVALID-SONG))
+              (current-shares (default-to { total-share: u0 } 
+                             (map-get? total-song-shares { song-id: song-id }))))
+
+            ;; Verify ownership
+            (asserts! (is-eq tx-sender (get owner song-details)) ERR-NOT-AUTHORIZED)
+
+            ;; Check total shares
+            (asserts! (<= (+ share (get total-share current-shares)) u10000) 
+                     ERR-TOTAL-SHARE-EXCEEDED)
+
+            ;; Update collaborator
+            (map-set royalty-splits
+                { song-id: song-id, collaborator: collaborator }
+                { share: share, role: role })
+
+            ;; Update total shares
+            (map-set total-song-shares
+                { song-id: song-id }
+                { total-share: (+ share (get total-share current-shares)) })
+
+            (ok true))))
+
+(define-public (update-song-status 
+    (song-id uint) 
+    (new-status (string-ascii 10)))
+    (begin
+        ;; Validate inputs first
+        (asserts! (is-valid-song-id song-id) ERR-INVALID-SONG-ID)
+        (try! (is-valid-status new-status))
+
+        (let ((song-details (unwrap! (get-song-details song-id) ERR-INVALID-SONG)))
+            ;; Verify ownership
+            (asserts! (is-eq tx-sender (get owner song-details)) ERR-NOT-AUTHORIZED)
+
+            ;; Update status
             (map-set rights-registry
-                { song-id: safe-id }
-                (merge (unwrap-panic song-exists) { status: safe-status })
-            )
-            (ok true)
-        )))
+                { song-id: song-id }
+                (merge song-details { status: new-status }))
+
+            (ok true))))
 
 ;; Administrative Functions
 (define-public (transfer-ownership (new-owner principal))
     (begin
-        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+        (check-authorization)
         (asserts! (not (is-eq new-owner tx-sender)) ERR-ZERO-ADDRESS)
         (var-set contract-owner new-owner)
-        (ok true)
-    ))
+        (ok true)))
