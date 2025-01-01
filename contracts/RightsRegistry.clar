@@ -39,3 +39,23 @@
 (define-read-only (get-collaborator-share (song-id uint) (collaborator principal))
     (map-get? royalty-splits { song-id: song-id, collaborator: collaborator })
 )
+
+;; Public Functions
+(define-public (register-song (song-id uint) (title (string-ascii 256)))
+    (let
+        ((song-exists (map-get? rights-registry { song-id: song-id })))
+        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+        (asserts! (is-none song-exists) ERR-ALREADY-EXISTS)
+
+        (map-set rights-registry
+            { song-id: song-id }
+            {
+                owner: tx-sender,
+                title: title,
+                created-at: block-height,
+                status: "active"
+            }
+        )
+        (ok true)
+    )
+)
